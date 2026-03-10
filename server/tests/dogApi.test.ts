@@ -33,4 +33,46 @@ describe('dogApi', () => {
     expect(response.status).toBe(500);
     expect(response.body.error).toBe('Failed to fetch dog image: Network error');
   });
+
+  it('should return 200 with success true and data from /api/dog/random', async () => {
+    const mockSuccessResponse = {
+      success: true,
+      data: {
+        imageUrl: 'https://images.dog.ceo/breeds/sheepdog.indian/Himalayan_Sheepdog.jpg',
+        status: 'success'
+      }
+    };
+
+    const { getDogImage } = await import('../controllers/dogController');
+    vi.mocked(getDogImage).mockImplementation((_req, res) => {
+      res.status(200).json(mockSuccessResponse);
+      return Promise.resolve();
+    });
+
+    const dogRoutes = (await import('../routes/dogRoutes')).default;
+
+    const app = express();
+    app.use('/api/dog', dogRoutes);
+
+    const response = await request(app).get('/api/dog/random');
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.data).toBeDefined();
+    expect(response.body.data).toHaveProperty('imageUrl');
+    expect(typeof response.body.data.imageUrl).toBe('string');
+  });
+
+  it('should return 404 and An unexpected error occurred', async () => {
+    const dogRoutes = (await import('../routes/dogRoutes')).default;
+
+    const app = express();
+    app.use('/api/dog', dogRoutes);
+
+    const response = await request(app).get('/api/dog/invalid');
+
+    expect(response.status).toBe(404);
+    
+    expect(response.text).toContain('Cannot GET /api/dog/invalid');
+  });
 });
